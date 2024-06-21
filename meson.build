@@ -28,11 +28,11 @@ libfmt_dep = dependency('fmt')
 
 libdrmomap_dep = dependency('libdrm_omap', required : get_option('omap'))
 
-if libdrmomap_dep.found()
+if libdrmomap_dep.found() and not meson.is_subproject()
     add_global_arguments('-DHAS_LIBDRM_OMAP', language : 'cpp')
 endif
 
-if get_option('libutils')
+if get_option('libutils') and not meson.is_subproject()
 	add_global_arguments('-DHAS_KMSXXUTIL', language : 'cpp')
 endif
 
