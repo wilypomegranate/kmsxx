@@ -60,23 +60,42 @@ EglState::EglState(void* native_display)
 	b = eglBindAPI(EGL_OPENGL_ES_API);
 	FAIL_IF(!b, "failed to bind api EGL_OPENGL_ES_API");
 
+	EGLint numConfigs;
+	b = eglGetConfigs(m_display, nullptr, 0, &numConfigs);
+	FAIL_IF(!b, "failed to get number of configs");
+
+	EGLConfig configs[numConfigs];
+	b = eglGetConfigs(m_display, configs, numConfigs, &numConfigs);
+	FAIL_IF(!b, "failed to get configs");
+
 	if (s_verbose) {
-		EGLint numConfigs;
-		b = eglGetConfigs(m_display, nullptr, 0, &numConfigs);
-		FAIL_IF(!b, "failed to get number of configs");
-
-		EGLConfig configs[numConfigs];
-		b = eglGetConfigs(m_display, configs, numConfigs, &numConfigs);
-		FAIL_IF(!b, "failed to get configs");
-
 		printf("Available configs:\n");
 
-		for (int i = 0; i < numConfigs; ++i)
+		for (int i = 0; i < numConfigs; ++i) {
 			print_egl_config(m_display, configs[i]);
+		}
 	}
 
-	b = eglChooseConfig(m_display, config_attribs, &m_config, 1, &n);
-	FAIL_IF(!b || n != 1, "failed to choose config");
+	EGLint format = static_cast<uint32_t>(kms::PixelFormat::XRGB8888);
+
+	b = eglChooseConfig(m_display, config_attribs, configs, numConfigs, &n);
+	FAIL_IF(!b || !n, "failed to find any configs that could match");
+
+	bool match = false;
+	for (int i = 0; i < numConfigs; ++i) {
+		EGLint id;
+		if (!eglGetConfigAttrib(m_display,
+					configs[i], EGL_NATIVE_VISUAL_ID,
+					&id))
+			continue;
+
+		if (id == format) {
+			m_config = configs[i];
+			match = true;
+			break;
+		}
+	}
+	FAIL_IF(match == false, "failed to match a config to format");
 
 	if (s_verbose) {
 		printf("Chosen config:\n");
